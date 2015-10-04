@@ -199,7 +199,7 @@ if __name__ == '__main__':
         email_smtp_server = options.email_smtp or 'localhost'
         email_sender_address = options.email_from or options.email
         email_receiver_address = options.email
-        email_subject = options.email_subject or 'Changes detected ({count})'
+        email_subject = options.email_subject or 'Changes detected ({count}): {names_summary}'
         email_tls = options.tls
         email_auth = options.auth
     else:
@@ -276,6 +276,7 @@ if __name__ == '__main__':
 
     summary = []
     details = []
+    changed_jobs = []
     count = 0
 
     filter_func = lambda x, y: y
@@ -344,11 +345,13 @@ if __name__ == '__main__':
                         timestamp_old, \
                         timestamp_new))
                 if len(diff) > 0:
+                    changed_jobs.append(job)
                     log.info('%s has changed - adding diff' % job)
                     details += foutput('changed', job, diff, summary)
                 else:
                     log.info('%s has not changed' % job)
             else:
+                changed_jobs.append(job)
                 log.info('%s does not exist - is considered "new"' % filename)
                 details += foutput('new', job, None, summary)
             log.info('writing current content of %s to %s' % (job, filename))
@@ -418,9 +421,15 @@ if __name__ == '__main__':
             print 'watched %d URLs in %d seconds\n' % (count, (end-start).seconds)
 
         if enable_emails:
+            if len(changed_jobs) < 5:
+                names_summary = ', '.join([job.name for job in changed_jobs])
+            else:
+                names_summary = ', '.join([job.name for job in changed_jobs[:5]], '...')
+
             try:
                 subject_args = {
                     'count': len(summary),
+                    'names_summary': names_summary,
                 }
 
                 mailer.send(email_smtp_server, email_sender_address,
