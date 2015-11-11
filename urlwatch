@@ -59,6 +59,8 @@ urls_txt = os.path.join(urlwatch_dir, 'urls.txt')
 cache_dir = os.path.join(urlwatch_dir, 'cache')
 scripts_dir = os.path.join(urlwatch_dir, 'lib')
 hooks_py = os.path.join(scripts_dir, 'hooks.py')
+# error hook py file
+error_hooks_py = os.path.join(scripts_dir, 'error_hooks.py')
 
 # Check if we are installed in the system already
 (prefix, bindir) = os.path.split(os.path.dirname(os.path.abspath(sys.argv[0])))
@@ -73,6 +75,8 @@ else:
 
 urls_txt_example = os.path.join(examples_dir, 'urls.txt.example')
 hooks_py_example = os.path.join(examples_dir, 'hooks.py.example')
+# error hook py file example
+error_hooks_py_example = os.path.join(examples_dir, 'error_hooks.py.example')
 
 # Code section
 
@@ -158,6 +162,7 @@ if __name__ == '__main__':
     parser.add_option('-v', '--verbose', action='store_true', dest='verbose', help='Show debug/log output')
     parser.add_option('', '--urls', dest='urls', metavar='FILE', help='Read URLs from the specified file')
     parser.add_option('', '--hooks', dest='hooks', metavar='FILE', help='Use specified file as hooks.py module')
+    parser.add_option('', '--error_hooks', dest='error_hooks', metavar='FILE', help='User specified file as error_hooks.py module')
     parser.add_option('-e', '--display-errors', action='store_true', dest='display_errors', help='Include HTTP errors (404, etc..) in the output')
     parser.add_option('-t', '--mailto', dest='email', metavar='ADDRESS', help='Send results via e-mail to ADDRESS')
     parser.add_option('-f', '--mailfrom', dest='email_from', metavar='ADDRESS', help='Alternate From: address for e-mail (--mailto)')
@@ -212,7 +217,6 @@ if __name__ == '__main__':
 
         enable_emails = False
 
-
     if options.urls:
         if os.path.isfile(options.urls):
             urls_txt = options.urls
@@ -231,12 +235,20 @@ if __name__ == '__main__':
             print 'Error: %s is not a file' % options.hooks
             sys.exit(1)
 
+    # Set error hooks py file
+    if options.error_hooks:
+        if os.path.isfile(options.error_hooks):
+            error_hooks_py = options.error_hooks
+            log.ingo('using %s as error_hooks.py' % options.error_hooks)
+        else:
+            log.error('%s is not a file' % options.error_hooks)
+            print 'Error: %s is not a file' % options.error_hooks
+            sys.exit(1)
 
     if options.cache:
             cache_dir = options.cache
             log.info('using {} as cache directory'.format(cache_dir))
-                
-            
+
     # Created all needed folders
     for needed_dir in (urlwatch_dir, cache_dir, scripts_dir):
         if not os.path.isdir(needed_dir):
@@ -276,6 +288,18 @@ if __name__ == '__main__':
             log.warning('hooks.py has no filter function - ignoring')
     else:
         log.info('not using hooks.py (file not found)')
+
+    error_filter_func = lambda x, y: y
+    if os.path.exists(error_hooks_py):
+        log.info('using error_hooks.py from %s' % hooks_py)
+        error_hooks = imp.load_source('error_hooks', error_hooks_py)
+        if hasattr(error_hooks, 'filter'):
+            log.info('found and enabled filter function from error_hooks.py')
+            error_filter_func = error_hooks.filter
+        else:
+            log.warning('error_hooks.py has no filter function - ignoring')
+    else:
+        log.info('not using error_hooks.py (file not found)')
 
     def process_job(job):
         log.info('now processing: %s', job.location)
@@ -341,6 +365,7 @@ if __name__ == '__main__':
                 # Happens in Python 2 when data contains non-ascii characters
                 open(filename, 'w').write(data.encode('utf-8'))
         except urllib2.HTTPError, error:
+            error_filter_func(job, error)
             if error.code == 304:
                 log.info('%s has not changed (HTTP 304)' % job)
             else:
@@ -348,22 +373,27 @@ if __name__ == '__main__':
                 if display_errors:
                     details += foutput('error', job, error, summary)
         except handler.ShellError, error:
+            error_filter_func(job, error)
             log.error('Shell returned %d' % error.result)
             if display_errors:
                 details += foutput('error', job, error, summary)
         except urllib2.URLError, error:
+            error_filter_func(job, error)
             log.error('got URLError while loading url: %s' % error)
             if display_errors:
                 details += foutput('error', job, error, summary)
         except IOError, error:
+            error_filter_func(job, error)
             log.error('got IOError while loading url: %s' % error)
             if display_errors:
                 details += foutput('error', job, error, summary)
         except socket.timeout, error:
+            error_filter_func(job, error)
             log.error('got timeout while loading url: %s' % error)
             if display_errors:
                 details += foutput('error', job, error, summary)
         except httplib.error, error:
+            error_filter_func(job, error)
             # This is to workaround a bug in urllib2, see
             # http://bugs.debian.org/cgi-bin/bugreport.cgi?bug=529740
             log.error('got httplib error while loading url: %s' % error)
