@@ -129,7 +129,7 @@ MAX_WORKERS = 10
 
 def foutput(type, url, content=None, summary=None, c='*', n=line_length):
     """Format output messages
-    
+
     Returns a snippet of a specific message type (i.e. 'changed') for
     a specific URL and an optional (possibly multi-line) content.
 
@@ -194,7 +194,7 @@ if __name__ == '__main__':
     if options.password:
         mailer.set_password(options.email_smtp, options.email_from)
         sys.exit(0)
-        
+
     if options.email:
         log.info('Send emails enabled')
         enable_emails = True
