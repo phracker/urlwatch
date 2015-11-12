@@ -239,7 +239,7 @@ if __name__ == '__main__':
     if options.error_hooks:
         if os.path.isfile(options.error_hooks):
             error_hooks_py = options.error_hooks
-            log.ingo('using %s as error_hooks.py' % options.error_hooks)
+            log.info('using %s as error_hooks.py' % options.error_hooks)
         else:
             log.error('%s is not a file' % options.error_hooks)
             print 'Error: %s is not a file' % options.error_hooks
