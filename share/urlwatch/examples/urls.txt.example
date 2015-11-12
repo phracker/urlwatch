@@ -26,3 +26,7 @@ http://example.org/With%20Spaces/
 # separated by a single space character. POST data is URL-encoded.
 http://example.com/search.cgi button=Search&q=something&category=4
 
+# You can add headers behind the URL,
+# seprated by a single space character and use : spilt the key and value
+http://example.com/search Host:example.com&Token=xxx
+

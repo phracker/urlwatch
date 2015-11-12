@@ -1,0 +1,16 @@
+# -*- coding: utf-8 -*-
+
+#
+# Example error hooks file for urlwatch
+#
+# Copyright (c) 2015 Fatpa Cai <fatpa.cai@gmail.com>
+# All rights reserved.
+#
+
+from __future__ import print_function, absolute_import
+
+__author__ = 'fatpa'
+
+
+def filter(url, error):
+    print(url, error)
